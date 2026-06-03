@@ -20,6 +20,9 @@ export const verifyOtpSchema = z.object({
 });
 
 // Esquemas de Reportes
+// `imageUrl` se mantiene por retro-compatibilidad del schema, pero la subida
+// real se hace directamente a Supabase Storage desde el cliente y el server
+// action recibe `storagePath`.
 export const reportBaseSchema = z.object({
   type: z.enum(['LOST', 'FOUND']),
   species: z.enum(['DOG', 'CAT']),
@@ -32,7 +35,9 @@ export const reportBaseSchema = z.object({
   }),
   description: z.string().optional(),
   contactPhone: z.string().min(8, { message: 'El teléfono de contacto es obligatorio y debe tener al menos 8 dígitos.' }),
-  imageUrl: z.string().min(1, { message: 'La foto principal es obligatoria.' }),
+  imageUrl: z.string().optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
 });
 
 export const lostReportSchema = reportBaseSchema.extend({

@@ -1,3 +1,16 @@
+// -----------------------------------------------------------------------------
+// BACKUP / MANUAL TRANSPORT ONLY
+//
+// The OTP and magic-link auth flow is handled entirely by Supabase Auth
+// (see src/actions/auth.ts and src/app/login/page.tsx). This file is kept
+// as a utility for any *additional* transactional emails the product team
+// may want to send in the future (e.g. "we received a sighting of your pet",
+// "your report has been marked REUNITED", weekly digests, etc.).
+//
+// Do NOT call this function from the auth code path. Supabase Auth manages
+// the OTP code generation, expiration and delivery for us.
+// -----------------------------------------------------------------------------
+
 export async function sendEmailOtp(email: string, code: string): Promise<{ success: boolean; error?: string }> {
   console.log(`\n========================================\n[EMAIL OTP SIMULATION]`);
   console.log(`Para: ${email}`);

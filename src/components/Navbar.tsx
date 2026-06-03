@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { logout } from '@/actions/auth';
-import { SessionPayload } from '@/lib/auth';
+import { signOut } from '@/actions/auth';
+import type { Session } from '@/lib/supabase/session';
 import { Menu, X, LogOut, PlusCircle, Search, User } from 'lucide-react';
 
 interface NavbarProps {
-  session: SessionPayload | null;
+  session: Session | null;
 }
 
 export default function Navbar({ session }: NavbarProps) {
@@ -16,12 +16,14 @@ export default function Navbar({ session }: NavbarProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
-    const res = await logout();
-    if (res.success) {
-      router.refresh();
-      router.push('/');
-    }
+    await signOut();
+    router.refresh();
+    router.push('/');
   };
+
+  const firstName = session?.profile?.first_name ?? null;
+  const lastName = session?.profile?.last_name ?? null;
+  const email = session?.user.email ?? null;
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -55,14 +57,14 @@ export default function Navbar({ session }: NavbarProps) {
                 <div className="flex items-center space-x-3 pl-2 border-l border-border">
                   <div className="flex flex-col text-right">
                     <span className="text-xs font-semibold text-foreground/80">
-                      {session.firstName || 'Usuario'}
+                      {firstName || email || 'Usuario'}
                     </span>
                     <span className="text-[10px] text-foreground/50">
                       Conectado
                     </span>
                   </div>
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-800 text-lost font-bold border border-border">
-                    {session.firstName ? session.firstName[0].toUpperCase() : <User className="h-4 w-4" />}
+                    {firstName ? firstName[0].toUpperCase() : <User className="h-4 w-4" />}
                   </div>
                   <button
                     onClick={handleLogout}
@@ -121,11 +123,11 @@ export default function Navbar({ session }: NavbarProps) {
               <div className="pt-2 border-t border-border flex items-center justify-between">
                 <div className="flex items-center space-x-2.5">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-800 text-lost font-bold border border-border">
-                    {session.firstName ? session.firstName[0].toUpperCase() : <User className="h-4 w-4" />}
+                    {firstName ? firstName[0].toUpperCase() : <User className="h-4 w-4" />}
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs font-semibold">
-                      {session.firstName} {session.lastName}
+                      {firstName ? `${firstName} ${lastName ?? ''}`.trim() : email}
                     </span>
                     <span className="text-[10px] text-foreground/50">Sesión iniciada</span>
                   </div>

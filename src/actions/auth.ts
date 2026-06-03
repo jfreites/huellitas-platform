@@ -1,51 +1,61 @@
 'use server';
 
-import { prisma } from '@/lib/db';
-import { setSession, destroySession } from '@/lib/auth';
-import { sendEmailOtp } from '@/lib/email';
-import { sendSmsOtp } from '@/lib/sms';
-import { requestOtpSchema, verifyOtpSchema } from '@/lib/schemas';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { requestOtpSchema } from '@/lib/schemas';
+import { getSupabaseAdmin } from '@/lib/supabase/service';
 
-// Generar código OTP aleatorio de 6 dígitos
-function generateOtpCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+function detectChannel(identifier: string): 'email' | 'sms' {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier) ? 'email' : 'sms';
 }
 
 export async function requestOtp(rawIdentifier: string) {
   try {
-    // Validar identificador
     const validated = requestOtpSchema.parse({ identifier: rawIdentifier });
     const identifier = validated.identifier.trim().toLowerCase();
-    
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-    const code = generateOtpCode();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos de validez
+    const channel = detectChannel(identifier);
+    const supabase = await createClient();
 
-    // Guardar OTP en base de datos (se puede mockear si hay problemas de DB, pero lo hacemos real)
-    await prisma.otpCode.create({
-      data: {
-        identifier,
-        code,
-        expiresAt,
-      },
-    });
+    const { error } =
+      channel === 'email'
+        ? await supabase.auth.signInWithOtp({
+            email: identifier,
+            options: {
+              shouldCreateUser: true,
+              emailRedirectTo: `${APP_URL}/api/auth/callback`,
+            },
+          })
+        : await supabase.auth.signInWithOtp({
+            phone: identifier,
+            options: {
+              shouldCreateUser: true,
+            },
+          });
 
-    if (isEmail) {
-      const emailResult = await sendEmailOtp(identifier, code);
-      if (!emailResult.success) {
-        throw new Error(emailResult.error || 'Fallo al enviar OTP de correo.');
-      }
-    } else {
-      const smsResult = await sendSmsOtp(identifier, code);
-      if (!smsResult.success) {
-        throw new Error(smsResult.error || 'Fallo al enviar OTP de SMS.');
-      }
+    if (error) {
+      throw new Error(error.message);
     }
 
-    return { success: true, isEmail, identifier, message: 'Código enviado exitosamente.' };
+    return {
+      success: true,
+      isEmail: channel === 'email',
+      identifier,
+      channel,
+      message:
+        channel === 'email'
+          ? `Te enviamos un código de verificación a ${identifier}. Revisa tu bandeja de entrada.`
+          : `Te enviamos un código SMS a ${identifier}.`,
+    };
   } catch (error: any) {
     console.error('Error en requestOtp:', error);
-    return { success: false, error: error.message || 'Error al procesar la solicitud de OTP.' };
+    return {
+      success: false,
+      error: error.message || 'Error al solicitar el código OTP.',
+    };
   }
 }
 
@@ -59,125 +69,90 @@ export async function verifyOtp(data: {
   try {
     const identifier = data.identifier.trim().toLowerCase();
     const code = data.code.trim();
+    const channel = detectChannel(identifier);
+    const supabase = await createClient();
 
-    // Buscar código OTP válido en base de datos
-    const otp = await prisma.otpCode.findFirst({
-      where: {
-        identifier,
-        code,
-        expiresAt: { gt: new Date() },
-        verified: false,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const type = channel === 'email' ? 'email' : 'sms';
 
-    if (!otp) {
-      return { success: false, error: 'Código incorrecto, expirado o ya verificado.' };
+    const { data: sessionData, error } =
+      channel === 'email'
+        ? await supabase.auth.verifyOtp({
+            email: identifier,
+            token: code,
+            type: 'email',
+          })
+        : await supabase.auth.verifyOtp({
+            phone: identifier,
+            token: code,
+            type: 'sms',
+          });
+
+    if (error || !sessionData.user) {
+      throw new Error(error?.message || 'Código incorrecto o expirado.');
     }
 
-    // Marcar OTP como verificado
-    await prisma.otpCode.update({
-      where: { id: otp.id },
-      data: { verified: true },
-    });
-
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-
-    // Buscar si el usuario ya existe
-    let user = await prisma.user.findFirst({
-      where: isEmail ? { email: identifier } : { phone: identifier },
-    });
-
-    // Si el usuario no existe y no se enviaron datos de registro, avisar a la UI
-    if (!user) {
-      if (!data.firstName || !data.lastName || !data.contactPhone) {
-        return { success: true, requiresRegistration: true };
-      }
-
-      // Crear usuario
-      user = await prisma.user.create({
-        data: {
-          email: isEmail ? identifier : null,
-          phone: isEmail ? data.contactPhone : identifier,
-          firstName: data.firstName,
-          lastName: data.lastName,
-        },
-      });
-    } else {
-      // Si el usuario ya existe pero no tiene nombre/teléfono guardado, y nos los envían, actualizarlos
-      const updateData: any = {};
-      if (data.firstName && !user.firstName) updateData.firstName = data.firstName;
-      if (data.lastName && !user.lastName) updateData.lastName = data.lastName;
-      if (data.contactPhone && !user.phone && isEmail) updateData.phone = data.contactPhone;
-
-      if (Object.keys(updateData).length > 0) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: updateData,
-        });
-      }
+    const metadata: Record<string, any> = {};
+    if (data.firstName) metadata.first_name = data.firstName;
+    if (data.lastName) metadata.last_name = data.lastName;
+    if (data.contactPhone && channel === 'email') {
+      metadata.contact_phone = data.contactPhone;
     }
 
-    // Guardar sesión en cookies y en base de datos
-    await setSession(user.id, user.email, user.phone, user.firstName, user.lastName);
+    if (Object.keys(metadata).length > 0) {
+      await supabase.auth.updateUser({ data: metadata });
+    }
 
-    // También creamos un registro de Session en DB
-    await prisma.session.create({
-      data: {
-        userId: user.id,
-        token: Math.random().toString(36).substring(2),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    if (channel === 'email' && data.contactPhone) {
+      const admin = getSupabaseAdmin();
+      // Cast bypass: the local Database type stub doesn't satisfy the
+      // postgrest-js GenericSchema constraint. Real production types
+      // come from `supabase gen types typescript` and would type-check
+      // without the cast.
+      await admin
+        .from('profiles')
+        .update({ phone: data.contactPhone } as never)
+        .eq('id', sessionData.user.id);
+    }
 
-    return { success: true, user };
+    revalidatePath('/', 'layout');
+    return { success: true };
   } catch (error: any) {
     console.error('Error en verifyOtp:', error);
-    return { success: false, error: error.message || 'Error al verificar el código.' };
+    return {
+      success: false,
+      error: error.message || 'Error al verificar el código.',
+    };
   }
 }
 
-// Iniciar sesión con OAuth Mock (Google/Facebook)
-export async function loginWithMockOAuth(provider: 'google' | 'facebook') {
-  try {
-    const mockEmail = `demo.${provider}@huellitas.org`;
-    const mockPhone = provider === 'google' ? '+5215555555555' : '+5219999999999';
-    
-    let user = await prisma.user.findUnique({
-      where: { email: mockEmail },
-    });
+export async function signInWithOAuth(
+  provider: 'google' | 'facebook',
+  redirectTo: string = '/'
+) {
+  const safeRedirect = redirectTo.startsWith('/') ? redirectTo : '/';
+  const supabase = await createClient();
 
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: mockEmail,
-          phone: mockPhone,
-          firstName: provider === 'google' ? 'Google' : 'Facebook',
-          lastName: 'Mascotas Demo',
-        },
-      });
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${APP_URL}/api/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+    },
+  });
 
-      // Crear registro de cuenta
-      await prisma.authAccount.create({
-        data: {
-          userId: user.id,
-          provider,
-          providerAccountId: `mock-oauth-id-${provider}-${Math.random().toString(36).substring(7)}`,
-        },
-      });
-    }
-
-    // Guardar sesión
-    await setSession(user.id, user.email, user.phone, user.firstName, user.lastName);
-
-    return { success: true, user };
-  } catch (error: any) {
-    console.error('Error en loginWithMockOAuth:', error);
-    return { success: false, error: error.message || 'Error al iniciar sesión de demostración.' };
+  if (error) {
+    return { success: false, error: error.message };
   }
+
+  if (data.url) {
+    redirect(data.url);
+  }
+
+  return { success: true };
 }
 
-export async function logout() {
-  await destroySession();
+export async function signOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath('/', 'layout');
   return { success: true };
 }

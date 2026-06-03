@@ -2,10 +2,12 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getReportById } from '@/actions/reports';
-import { getSession } from '@/lib/auth';
+import { getSession } from '@/lib/supabase/session';
+import { maskContactPhone } from '@/lib/phone';
 import { Calendar, MapPin, Phone, ArrowLeft } from 'lucide-react';
 import OwnerControls from '@/components/OwnerControls';
 import ReportActions from '@/components/ReportActions';
+import ContactPhoneCta from '@/components/ContactPhoneCta';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       images: [
         {
-          url: report.images?.[0]?.url || '',
+          url: report.images?.[0]?.publicUrl || '',
         }
       ],
     }
@@ -49,14 +51,16 @@ export default async function ReportDetail({ params }: PageProps) {
   }
 
   const report = result.report;
-  const isOwner = session?.userId === report.userId;
+  const isOwner = session?.user.id === report.user_id;
   const isLost = report.type === 'LOST';
-  const mainImage = report.images?.[0]?.url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600&auto=format&fit=crop';
+  const mainImage =
+    report.images?.[0]?.publicUrl ||
+    'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600&auto=format&fit=crop';
 
   const formattedDate = new Date(report.date).toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
   });
 
   // Traducir Estatus para la UI
@@ -79,11 +83,11 @@ export default async function ReportDetail({ params }: PageProps) {
 
   const statusDisplay = getStatusDisplay();
 
-  // Texto para compartir en WhatsApp
+  // Texto para compartir en WhatsApp (mascamos el teléfono para no exponerlo)
   const shareText = encodeURIComponent(
     `🐾 ¡POR FAVOR COMPARTE! Mascota ${isLost ? 'PERDIDA' : 'ENCONTRADA'}: ${
       isLost ? report.name : report.species === 'DOG' ? 'Perro' : 'Gato'
-    } en ${report.location}. Contacto: ${report.contactPhone}. Ver detalles en línea: ${
+    } en ${report.location}. Ver detalles y联系方式 en: ${
       process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     }/reportes/${report.id}`
   );
@@ -167,40 +171,29 @@ export default async function ReportDetail({ params }: PageProps) {
                     🎨 Color: {report.color}
                   </span>
                 )}
-                <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.hasCollar ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'opacity-40 line-through text-xs font-normal'}`}>
-                  🎀 Collar: {report.hasCollar ? 'Sí' : 'No'}
+                <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.has_collar ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'opacity-40 line-through text-xs font-normal'}`}>
+                  🎀 Collar: {report.has_collar ? 'Sí' : 'No'}
                 </span>
-                <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.hasChip ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' : 'opacity-40 line-through text-xs font-normal'}`}>
-                  💾 Chip: {report.hasChip ? 'Sí' : 'No'}
+                <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.has_chip ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' : 'opacity-40 line-through text-xs font-normal'}`}>
+                  💾 Chip: {report.has_chip ? 'Sí' : 'No'}
                 </span>
-                <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.hasSpots ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400' : 'opacity-40 line-through text-xs font-normal'}`}>
-                   manchas: {report.hasSpots ? 'Sí' : 'No'}
+                <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.has_spots ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400' : 'opacity-40 line-through text-xs font-normal'}`}>
+                   manchas: {report.has_spots ? 'Sí' : 'No'}
                 </span>
               </div>
 
-              {report.distinctiveText && (
+              {report.distinctive_text && (
                 <div className="rounded-xl border border-foreground/15 bg-stone-50/50 dark:bg-stone-900/10 p-3 mt-2">
                   <p className="text-xs font-bold leading-normal text-foreground/80">
                     <span className="text-lost mr-1 font-black">Detalle de Rasgo:</span>
-                    {report.distinctiveText}
+                    {report.distinctive_text}
                   </p>
                 </div>
               )}
             </div>
 
             {/* Teléfono de Contacto Gigante */}
-            <div className="rounded-2xl border-2 border-foreground bg-lost/5 dark:bg-lost/10 p-4 text-center">
-              <label className="text-[10px] font-black uppercase tracking-widest text-lost">¿Lo has visto? Comunícate de inmediato</label>
-              <div className="flex items-center justify-center gap-2 mt-1">
-                <Phone className="h-6 w-6 text-lost" />
-                <a href={`tel:${report.contactPhone}`} className="text-2xl sm:text-3xl font-black text-foreground hover:underline tracking-tight">
-                  {report.contactPhone}
-                </a>
-              </div>
-              <p className="text-[9px] text-foreground/50 mt-1 leading-normal">
-                Reporte validado mediante OTP. Protegido contra suplantaciones.
-              </p>
-            </div>
+            <ContactPhoneCta phone={report.contact_phone} />
           </div>
         </div>
 

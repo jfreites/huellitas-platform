@@ -1,23 +1,31 @@
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
+import { createClient } from '@/lib/supabase/server';
+import { getPublicUrl } from '@/lib/supabase/storage';
 import ReportCard from '@/components/ReportCard';
 import { AlertCircle, CheckCircle, Search, ArrowRight, Shield, Heart } from 'lucide-react';
 
 export const revalidate = 60; // Revalidar la landing cada minuto para mostrar casos frescos
+export const dynamic = 'force-dynamic'; // El cliente de Supabase usa cookies; render dinámico obligatorio
 
 export default async function Home() {
-  // Obtener los 3 reportes más recientes
   let recentReports: any[] = [];
   try {
-    recentReports = await prisma.report.findMany({
-      take: 3,
-      include: {
-        images: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*, images:report_images(*), user:profiles(id, first_name, last_name)')
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (error) throw error;
+
+    recentReports = (data ?? []).map((row: any) => ({
+      ...row,
+      images: (row.images ?? []).map((img: any) => ({
+        ...img,
+        publicUrl: getPublicUrl(img.storage_path),
+      })),
+    }));
   } catch (error) {
     console.error('Fallo al obtener reportes en la landing:', error);
   }

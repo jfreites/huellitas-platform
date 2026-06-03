@@ -1,32 +1,48 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { decrypt } from '@/lib/auth';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from '@/lib/supabase/database.types';
+
+const PROTECTED_PREFIX = '/reportes/nuevo';
 
 export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({ request });
+
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { pathname } = request.nextUrl;
 
-  // Solo proteger rutas de creación/edición de reportes
-  if (pathname.startsWith('/reportes/nuevo')) {
-    const session = request.cookies.get('huellitas_session')?.value;
-    
-    if (!session) {
-      const url = new URL('/login', request.url);
-      url.searchParams.set('callback', pathname);
-      return NextResponse.redirect(url);
-    }
-    
-    const parsed = await decrypt(session);
-    if (!parsed) {
-      const url = new URL('/login', request.url);
-      url.searchParams.set('callback', pathname);
-      return NextResponse.redirect(url);
-    }
+  if (pathname.startsWith(PROTECTED_PREFIX) && !user) {
+    const url = new URL('/login', request.url);
+    url.searchParams.set('callback', pathname);
+    return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
-// Configurar qué rutas activan el middleware
 export const config = {
-  matcher: ['/reportes/nuevo/:path*', '/reportes/nuevo'],
+  matcher: ['/reportes/nuevo', '/reportes/nuevo/:path*'],
 };

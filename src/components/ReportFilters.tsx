@@ -2,7 +2,8 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition, useState, useEffect } from 'react';
-import { Search, MapPin, Grid, Layers, Filter } from 'lucide-react';
+import { Search, Grid, Layers, Filter } from 'lucide-react';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 export default function ReportFilters() {
   const router = useRouter();
@@ -81,13 +82,14 @@ export default function ReportFilters() {
           </div>
           
           <div className="relative">
-            <MapPin className="absolute top-3 left-3 h-4 w-4 text-lost/70" />
-            <input
-              type="text"
-              placeholder="Última ubicación vista..."
+            <AddressAutocomplete
+              id="filter-location"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background py-2.5 pl-9.5 pr-4 text-sm focus:border-lost focus:outline-none focus:ring-2 focus:ring-lost/15 transition-all"
+              onChange={setLocation}
+              onSelect={(sel) => setLocation(sel.address)}
+              placeholder="Última ubicación vista..."
+              iconClassName="text-lost/70"
+              apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''}
             />
           </div>
         </div>

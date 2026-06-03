@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createReport } from '@/actions/reports';
-import { AlertCircle, Camera, Check, FileText, ArrowRight, Compass } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import AddressAutocomplete, {
+  type AddressSelection,
+} from '@/components/AddressAutocomplete';
+import { AlertCircle, Camera, Check, FileText, ArrowRight, Compass, Paintbrush } from 'lucide-react';
+import SearchableCombobox from '@/components/SearchableCombobox';
+import { FUR_COLORS } from '@/data/fur-colors';
 
 export default function NewReport() {
   const router = useRouter();
@@ -26,6 +32,7 @@ export default function NewReport() {
   const [name, setName] = useState('');
   const [color, setColor] = useState('');
   const [location, setLocation] = useState('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -41,10 +48,10 @@ export default function NewReport() {
   const [foundStatus, setFoundStatus] = useState<'IN_SHELTER' | 'WANDERING' | 'FOUND_DEAD'>('IN_SHELTER');
 
   // Imagen
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Manejar carga y conversión de imagen a Base64
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -54,12 +61,12 @@ export default function NewReport() {
       return;
     }
 
-    // Límite de 4MB para evitar payloads base64 gigantescos
     if (file.size > 4 * 1024 * 1024) {
       setError('La imagen es demasiado grande. El tamaño máximo permitido es 4MB.');
       return;
     }
 
+    setImageFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
@@ -73,13 +80,18 @@ export default function NewReport() {
     e.preventDefault();
     setError(null);
 
-    if (!imagePreview) {
+    if (!imageFile) {
       setError('La foto principal de la mascota es obligatoria.');
       return;
     }
 
     if (!location.trim()) {
       setError('La ubicación es obligatoria.');
+      return;
+    }
+
+    if (!coords) {
+      setError('Selecciona una dirección de la lista de Google para guardar las coordenadas.');
       return;
     }
 
@@ -98,10 +110,11 @@ export default function NewReport() {
       type,
       species,
       location,
+      latitude: coords.lat,
+      longitude: coords.lng,
       date,
       description,
       contactPhone,
-      imageUrl: imagePreview,
       hasCollar,
       hasSpots,
       hasChip,
@@ -128,7 +141,37 @@ export default function NewReport() {
     }
 
     startTransition(async () => {
-      const res = await createReport(payload);
+      // 1) Subir imagen a Supabase Storage desde el navegador.
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError('Tu sesión expiró. Inicia sesión de nuevo.');
+        return;
+      }
+
+      const safeName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `${user.id}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('pet-images')
+        .upload(storagePath, imageFile, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: imageFile.type,
+        });
+
+      if (uploadError) {
+        setError(`Error al subir la imagen: ${uploadError.message}`);
+        return;
+      }
+
+      // 2) Crear el reporte enviando el storagePath al server action.
+      const res = await createReport({
+        ...payload,
+        storagePath,
+      });
+
       if (res.success) {
         router.refresh();
         router.push(`/reportes/${res.reportId}`);
@@ -285,8 +328,9 @@ export default function NewReport() {
             {/* Color Principal */}
             <div className="space-y-1.5">
               <label htmlFor="color" className="text-xs font-bold uppercase tracking-wider text-foreground/70">
-                {type === 'LOST' ? 'Color(es) Predominante(s) *' : 'Color(es) Predominante(s)'}
+                {type === 'LOST' ? 'Color del pelaje *' : 'Color del pelaje'}
               </label>
+              {/*
               <input
                 id="color"
                 type="text"
@@ -295,6 +339,17 @@ export default function NewReport() {
                 onChange={(e) => setColor(e.target.value)}
                 className="w-full rounded-xl border border-border bg-background py-2.5 px-3.5 text-sm focus:border-lost focus:outline-none"
                 required={type === 'LOST'}
+              />
+              */}
+              <SearchableCombobox
+                options={FUR_COLORS}
+                value={color}
+                onChange={(slug) => setColor(slug as string)}
+                placeholder='Selecciona del listado...'
+                required
+                icon={<Paintbrush />}
+                name='color'
+                emptyMessage='Sin resultados'
               />
             </div>
           </div>
@@ -349,14 +404,17 @@ export default function NewReport() {
               <label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-foreground/70">
                 {type === 'LOST' ? 'Último Lugar Visto *' : 'Lugar de Hallazgo *'}
               </label>
-              <input
+              <AddressAutocomplete
                 id="location"
-                type="text"
-                placeholder="ej. Col. Centro, Av. Reforma entre Calle 4 y 6"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background py-2.5 px-3.5 text-sm focus:border-lost focus:outline-none"
+                onChange={setLocation}
+                onSelect={(sel: AddressSelection) => {
+                  setLocation(sel.address);
+                  setCoords({ lat: sel.lat, lng: sel.lng });
+                }}
+                placeholder="ej. Col. Centro, Av. Reforma entre Calle 4 y 6"
                 required
+                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''}
               />
             </div>
 
