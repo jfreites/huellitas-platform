@@ -26,7 +26,7 @@ export default function ReportActions({ shareText }: ReportActionsProps) {
         href={`https://api.whatsapp.com/send?text=${shareText}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-650 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-colors"
+        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-colors"
       >
         <Share2 className="h-4.5 w-4.5" />
         <span>Compartir en WhatsApp</span>

@@ -7,9 +7,10 @@ import { createClient } from '@/lib/supabase/client';
 import AddressAutocomplete, {
   type AddressSelection,
 } from '@/components/AddressAutocomplete';
-import { AlertCircle, Camera, Check, FileText, ArrowRight, Compass, Paintbrush } from 'lucide-react';
+import { AlertCircle, Camera, Check, FileText, ArrowRight, Compass, Paintbrush, PawPrint } from 'lucide-react';
 import SearchableCombobox from '@/components/SearchableCombobox';
 import { FUR_COLORS } from '@/data/fur-colors';
+import { BREEDS_BY_SPECIES } from '@/data/breeds';
 
 export default function NewReport() {
   const router = useRouter();
@@ -36,7 +37,8 @@ export default function NewReport() {
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
   const [contactPhone, setContactPhone] = useState('');
-  
+  const [breed, setBreed] = useState('');
+
   // Características
   const [hasCollar, setHasCollar] = useState(false);
   const [hasSpots, setHasSpots] = useState(false);
@@ -398,10 +400,9 @@ export default function NewReport() {
             </div>
           )}
 
-          {/* Ubicación y Tiempo */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-foreground/70">
+          {/* Ubicación */}
+          <div className="space-y-2">
+            <label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-foreground/70">
                 {type === 'LOST' ? 'Último Lugar Visto *' : 'Lugar de Hallazgo *'}
               </label>
               <AddressAutocomplete
@@ -415,6 +416,25 @@ export default function NewReport() {
                 placeholder="ej. Col. Centro, Av. Reforma entre Calle 4 y 6"
                 required
                 apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''}
+              />
+          </div>
+
+
+          {/* Raza y Tiempo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="color" className="text-xs font-bold uppercase tracking-wider text-foreground/70">
+                Raza
+              </label>
+              <SearchableCombobox
+                options={BREEDS_BY_SPECIES[species]}
+                value={breed}
+                onChange={(slug) => setBreed(slug as string)}
+                placeholder='Selecciona una raza...'
+                required
+                icon={<PawPrint />}
+                name='breed'
+                emptyMessage='Sin resultados'
               />
             </div>
 
@@ -449,7 +469,7 @@ export default function NewReport() {
                 />
                 <span className="text-xs font-semibold">Tiene Collar</span>
               </label>
-              
+
               <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-background cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900">
                 <input
                   type="checkbox"
