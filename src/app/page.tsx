@@ -191,10 +191,10 @@ export default async function Home() {
           </div>
           <div className="shrink-0 flex gap-4 w-full md:w-auto">
             <Link
-              href="/login"
+              href="/#"
               className="w-full md:w-auto rounded-full bg-stone-100 hover:bg-stone-200 text-stone-900 px-6 py-3 text-xs font-bold transition-all text-center"
             >
-              Probar Validación OTP
+              Leer políticas de protección de datos
             </Link>
           </div>
         </div>

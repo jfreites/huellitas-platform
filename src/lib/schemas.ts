@@ -49,6 +49,7 @@ export const lostReportSchema = reportBaseSchema.extend({
   hasChip: z.boolean().default(false),
   hasScars: z.boolean().default(false),
   color: z.string().min(2, { message: 'El color de la mascota es obligatorio.' }),
+  breed: z.string().min(2, { message: 'La raza de la mascota es obligatoria.' }),
   distinctiveText: z.string().optional(),
 });
 
@@ -61,6 +62,7 @@ export const foundReportSchema = reportBaseSchema.extend({
   hasChip: z.boolean().default(false),
   hasScars: z.boolean().default(false),
   color: z.string().optional(),
+  breed: z.string().optional(),
   distinctiveText: z.string().optional(),
 });
 

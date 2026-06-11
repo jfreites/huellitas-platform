@@ -50,6 +50,7 @@ export interface Report {
   has_chip: boolean;
   has_scars: boolean;
   color: string | null;
+  breed: string | null;
   distinctive_text: string | null;
   location: string;
   latitude: number | null;

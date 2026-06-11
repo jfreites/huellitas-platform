@@ -38,6 +38,7 @@ export async function createReport(formData: {
   hasChip?: boolean;
   hasScars?: boolean;
   color?: string;
+  breed?: string;
   distinctiveText?: string;
   location: string;
   date: string;
@@ -65,6 +66,7 @@ export async function createReport(formData: {
       hasChip: formData.hasChip ?? false,
       hasScars: formData.hasScars ?? false,
       color: formData.color,
+      breed: formData.breed,
       distinctiveText: formData.distinctiveText,
       location: formData.location,
       date: formData.date,
@@ -98,6 +100,7 @@ export async function createReport(formData: {
         has_chip: validated.hasChip ?? false,
         has_scars: validated.hasScars ?? false,
         color: validated.color || 'No especificado',
+        breed: validated.breed || 'No especificado',
         distinctive_text: validated.distinctiveText || null,
         location: validated.location,
         latitude: validated.latitude ?? null,
