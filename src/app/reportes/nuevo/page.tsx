@@ -136,10 +136,12 @@ export default function NewReport() {
       payload.name = name.trim();
       payload.color = color.trim();
       payload.status = 'LOST_ACTIVE';
+      payload.breed = breed.trim();
     } else {
       payload.status = foundStatus;
       payload.name = name.trim() || 'Mascota sin nombre';
       payload.color = color.trim() || 'No especificado';
+      payload.breed = breed.trim() || 'No especificado';
     }
 
     startTransition(async () => {
@@ -533,7 +535,7 @@ export default function NewReport() {
                 required
               />
               <p className="text-[10px] text-foreground/45 mt-1 leading-normal">
-                Obligatorio. Se mostrará en el póster e impresión.
+                Obligatorio. Esta información no será pública y sólo será usada para contacto interno.
               </p>
             </div>
 

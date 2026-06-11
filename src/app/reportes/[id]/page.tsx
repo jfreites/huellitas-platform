@@ -4,10 +4,12 @@ import { notFound } from 'next/navigation';
 import { getReportById } from '@/actions/reports';
 import { getSession } from '@/lib/supabase/session';
 import { maskContactPhone } from '@/lib/phone';
-import { Calendar, MapPin, Phone, ArrowLeft } from 'lucide-react';
+import { Calendar, MapPin, Phone, ArrowLeft, QrCode, MessageCircle } from 'lucide-react';
 import OwnerControls from '@/components/OwnerControls';
 import ReportActions from '@/components/ReportActions';
 import ContactPhoneCta from '@/components/ContactPhoneCta';
+import { CAT_BREEDS } from '@/data/breeds';
+import { FUR_COLORS } from '@/data/fur-colors';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,12 +87,13 @@ export default async function ReportDetail({ params }: PageProps) {
 
   // Texto para compartir en WhatsApp (mascamos el teléfono para no exponerlo)
   const shareText = encodeURIComponent(
-    `🐾 ¡POR FAVOR COMPARTE! Mascota ${isLost ? 'PERDIDA' : 'ENCONTRADA'}: ${
-      isLost ? report.name : report.species === 'DOG' ? 'Perro' : 'Gato'
-    } en ${report.location}. Ver detalles y联系方式 en: ${
-      process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    `🐾 ¡POR FAVOR COMPARTE! Mascota ${isLost ? 'PERDIDA' : 'ENCONTRADA'}: ${isLost ? report.name : report.species === 'DOG' ? 'Perro' : 'Gato'
+    } en ${report.location}. Ver detalles y联系方式 en: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     }/reportes/${report.id}`
   );
+
+  const petColor = FUR_COLORS.find(b => b.slug === report.color)
+  const petBreed = CAT_BREEDS.find(b => b.slug === report.breed)
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8">
@@ -127,7 +130,7 @@ export default async function ReportDetail({ params }: PageProps) {
           <div className="relative aspect-4/3 md:aspect-square w-full rounded-2xl border-2 border-foreground overflow-hidden bg-stone-100 dark:bg-stone-900">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={mainImage} alt={report.name || 'Mascota'} className="h-full w-full object-cover" />
-            
+
             {/* Especie Badge */}
             <div className="absolute bottom-4 right-4 rounded-full border-2 border-foreground bg-background px-3 py-1.5 text-xs font-black shadow-md">
               {report.species === 'DOG' ? '🐕 PERRO' : '🐈 GATO'}
@@ -168,7 +171,12 @@ export default async function ReportDetail({ params }: PageProps) {
               <div className="flex flex-wrap gap-1.5">
                 {report.color && (
                   <span className="rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold bg-stone-50 dark:bg-stone-900/50">
-                    🎨 Color: {report.color}
+                    🎨 Color: {petColor ? petColor.name : 'Sin información'}
+                  </span>
+                )}
+                {report.breed && (
+                  <span className="rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold bg-stone-50 dark:bg-stone-900/50">
+                    🐾 Raza: {petBreed ? petBreed.name : 'Sin información'}
                   </span>
                 )}
                 <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.has_collar ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'opacity-40 line-through text-xs font-normal'}`}>
@@ -178,7 +186,7 @@ export default async function ReportDetail({ params }: PageProps) {
                   💾 Chip: {report.has_chip ? 'Sí' : 'No'}
                 </span>
                 <span className={`rounded-full border border-foreground/20 px-3 py-1 text-xs font-extrabold ${report.has_spots ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400' : 'opacity-40 line-through text-xs font-normal'}`}>
-                   manchas: {report.has_spots ? 'Sí' : 'No'}
+                  manchas: {report.has_spots ? 'Sí' : 'No'}
                 </span>
               </div>
 
@@ -192,8 +200,9 @@ export default async function ReportDetail({ params }: PageProps) {
               )}
             </div>
 
-            {/* Teléfono de Contacto Gigante */}
+            {/* Teléfono de Contacto Gigante
             <ContactPhoneCta phone={report.contact_phone} />
+            */}
           </div>
         </div>
 
@@ -216,6 +225,48 @@ export default async function ReportDetail({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      {report.type === 'FOUND' ? (
+        <div className="print:hidden flex flex-col bg-[#EAF3DE] border-2 border-solid border-[#C0DD97] p-6 rounded-3xl mt-4">
+          <h3 className='text-[#3B6D11] text-xl'>🐾 ¿Es tu mascota o la reconoces?</h3>
+          <p>Si este {report.species === 'CAT' ? 'gato' : 'perro'} es tuyo o sabes de quién es, comunícate con quien lo resguarda. Tu información no será pública.</p>
+          <div className="py-2 flex">
+            <button
+              type="button"
+              className="flex w-full h-12 items-center justify-center gap-2 rounded-xl border border-foreground/35 bg-card hover:bg-stone-50 dark:hover:bg-stone-900 font-bold text-sm shadow-xs transition-colors cursor-pointer"
+            >
+              <MessageCircle className="h-4.5 w-4.5 text-found" />
+              <span>Contactar a quien lo resguarda</span>
+            </button>
+          </div>
+          <div className="qr-hint flex items-center gap-2.5 bg-gray-100 mt-3 text-sm p-4">
+            <div className="qr-box">
+              <QrCode width={32} aria-hidden="true" />
+            </div>
+            <span>En el <strong>póster impreso</strong> aparece un QR que abre directamente esta pantalla — sin necesidad de buscar en la app.</span>
+          </div>
+        </div>
+      ) : (
+        <div className="print:hidden flex flex-col bg-[#FCEBEB] border-2 border-solid border-[#F7C1C1] p-6 rounded-3xl mt-4">
+          <h3 className='text-[#A32D2D] text-xl'>🐾 ¿Viste o tienes a esta mascota?</h3>
+          <p>Si encontraste a este {report.species === 'CAT' ? 'gato' : 'perro'} o lo viste recientemente, avísale a su dueño. Tu información no será pública.</p>
+          <div className="py-2 flex">
+            <button
+              type="button"
+              className="flex w-full h-12 items-center justify-center gap-2 rounded-xl border border-foreground/35 bg-card hover:bg-stone-50 dark:hover:bg-stone-900 font-bold text-sm shadow-xs transition-colors cursor-pointer"
+            >
+              <MessageCircle className="h-4.5 w-4.5 text-lost" />
+              <span>Avisar al dueño</span>
+            </button>
+          </div>
+          <div className="qr-hint flex items-center gap-2.5 bg-gray-100 mt-3 text-sm p-4">
+            <div className="qr-box">
+              <QrCode width={32} aria-hidden="true" />
+            </div>
+            <span>En el <strong>póster impreso</strong> aparece un QR que abre directamente esta pantalla — sin necesidad de buscar en la app.</span>
+          </div>
+        </div>
+      )}
 
       <ReportActions shareText={shareText} />
 
