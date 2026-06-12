@@ -17,19 +17,21 @@
   --radius-sm: 8px;
 }
 
+/*
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0c0a09; /* Warm black */
-    --foreground: #f5f5f4; /* Warm white */
-    --card: #1c1917; /* Dark stone */
+    --background: #0c0a09;
+    --foreground: #f5f5f4;
+    --card: #1c1917;
     --card-foreground: #f5f5f4;
     --border: #2e2a28;
     --ring: #fb923c;
-    
+
     --lost-accent: #f43f5e;
     --found-accent: #10b981;
   }
 }
+*/
 
 @theme {
   --color-background: var(--background);
