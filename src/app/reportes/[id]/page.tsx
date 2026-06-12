@@ -10,6 +10,7 @@ import ReportActions from '@/components/ReportActions';
 import ContactPhoneCta from '@/components/ContactPhoneCta';
 import { CAT_BREEDS } from '@/data/breeds';
 import { FUR_COLORS } from '@/data/fur-colors';
+import ClaimAction from '@/components/ClaimAction';
 
 export const dynamic = 'force-dynamic';
 
@@ -231,13 +232,7 @@ export default async function ReportDetail({ params }: PageProps) {
           <h3 className='text-[#3B6D11] text-xl'>🐾 ¿Es tu mascota o la reconoces?</h3>
           <p>Si este {report.species === 'CAT' ? 'gato' : 'perro'} es tuyo o sabes de quién es, comunícate con quien lo resguarda. Tu información no será pública.</p>
           <div className="py-2 flex">
-            <button
-              type="button"
-              className="flex w-full h-12 items-center justify-center gap-2 rounded-xl border border-foreground/35 bg-card hover:bg-stone-50 dark:hover:bg-stone-900 font-bold text-sm shadow-xs transition-colors cursor-pointer"
-            >
-              <MessageCircle className="h-4.5 w-4.5 text-found" />
-              <span>Contactar a quien lo resguarda</span>
-            </button>
+            <ClaimAction report={report} />
           </div>
           <div className="qr-hint flex items-center gap-2.5 bg-gray-100 mt-3 text-sm p-4">
             <div className="qr-box">
@@ -251,13 +246,7 @@ export default async function ReportDetail({ params }: PageProps) {
           <h3 className='text-[#A32D2D] text-xl'>🐾 ¿Viste o tienes a esta mascota?</h3>
           <p>Si encontraste a este {report.species === 'CAT' ? 'gato' : 'perro'} o lo viste recientemente, avísale a su dueño. Tu información no será pública.</p>
           <div className="py-2 flex">
-            <button
-              type="button"
-              className="flex w-full h-12 items-center justify-center gap-2 rounded-xl border border-foreground/35 bg-card hover:bg-stone-50 dark:hover:bg-stone-900 font-bold text-sm shadow-xs transition-colors cursor-pointer"
-            >
-              <MessageCircle className="h-4.5 w-4.5 text-lost" />
-              <span>Avisar al dueño</span>
-            </button>
+            <ClaimAction report={report} />
           </div>
           <div className="qr-hint flex items-center gap-2.5 bg-gray-100 mt-3 text-sm p-4">
             <div className="qr-box">
