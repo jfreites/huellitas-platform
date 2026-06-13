@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react'
+import { useActionState, useCallback } from 'react'
 import { createContactRequest } from '@/actions/contact';
 import { Send } from 'lucide-react';
 
@@ -9,11 +9,22 @@ const initialState = {
     error: '',
 }
 
-export default function ClaimFormModal({ onClose }: { onClose: () => void }) {
+export default function ClaimFormModal({
+    reportId,
+    onClose,
+}: {
+    reportId: string;
+    onClose: () => void;
+}) {
     const [state, formAction, pending] = useActionState(
         createContactRequest,
         initialState
     )
+    const setRenderedAtInput = useCallback((node: HTMLInputElement | null) => {
+        if (node && !node.value) {
+            node.value = String(Date.now())
+        }
+    }, [])
 
     return (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50">
@@ -28,11 +39,33 @@ export default function ClaimFormModal({ onClose }: { onClose: () => void }) {
                     <h2 className="mb-4 text-xl font-semibold">
                         Envía un mensaje
                     </h2>
+                    <p className="mb-4 text-sm text-stone-600">
+                        Comparte tus datos para que podamos notificar al responsable del reporte sin exponer su información privada.
+                    </p>
                     <form action={formAction} className="space-y-4">
+                        <input type="hidden" name="reportId" value={reportId} />
+                        <input
+                            type="hidden"
+                            name="renderedAt"
+                            ref={setRenderedAtInput}
+                        />
+                        <div className="hidden" aria-hidden="true">
+                            <label htmlFor="contact-website">Sitio web</label>
+                            <input
+                                id="contact-website"
+                                name="website"
+                                type="text"
+                                tabIndex={-1}
+                                autoComplete="off"
+                            />
+                        </div>
+
                         <input
                             name="name"
                             type="text"
                             placeholder="Nombre"
+                            autoComplete="name"
+                            required
                             className="w-full rounded-md border px-3 py-2"
                         />
 
@@ -40,6 +73,8 @@ export default function ClaimFormModal({ onClose }: { onClose: () => void }) {
                             name="contact"
                             type="text"
                             placeholder="Email o teléfono"
+                            autoComplete="email tel"
+                            required
                             className="w-full rounded-md border px-3 py-2"
                         />
 

@@ -12,12 +12,6 @@ interface ClaimActionProps {
 export default function ClaimAction({ report }: ClaimActionProps) {
     const [open, setOpen] = useState(false)
 
-    const handleClaim = () => {
-        if (typeof window !== 'undefined') {
-            window.print();
-        }
-    };
-
     const buttonClassName = `h-4.5 w-4.5 ${report.type === 'FOUND' ? 'text-found' : 'text-lost'}`;
 
     return (
@@ -33,7 +27,7 @@ export default function ClaimAction({ report }: ClaimActionProps) {
             </button>
 
             {open && (
-                <ClaimFormModal onClose={() => setOpen(false)} />
+                <ClaimFormModal reportId={report.id} onClose={() => setOpen(false)} />
             )}
         </>
     )

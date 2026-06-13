@@ -63,3 +63,17 @@ export interface Report {
   images?: ReportImage[];
   user?: Pick<Profile, 'id' | 'first_name' | 'last_name' | 'email' | 'phone'> | null;
 }
+
+export interface ContactRequest {
+  id: string;
+  report_id: string;
+  report_owner_id: string;
+  requester_name: string;
+  requester_contact: string;
+  requester_message: string | null;
+  requester_email: string | null;
+  requester_phone: string | null;
+  ip_hash: string;
+  user_agent: string | null;
+  created_at: string;
+}

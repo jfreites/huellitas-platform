@@ -88,6 +88,21 @@ export interface Database {
           created_at: string;
         };
       };
+      contact_requests: GenericTable & {
+        Row: {
+          id: string;
+          report_id: string;
+          report_owner_id: string;
+          requester_name: string;
+          requester_contact: string;
+          requester_message: string | null;
+          requester_email: string | null;
+          requester_phone: string | null;
+          ip_hash: string;
+          user_agent: string | null;
+          created_at: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

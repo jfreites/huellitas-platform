@@ -3,12 +3,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getReportById } from '@/actions/reports';
 import { getSession } from '@/lib/supabase/session';
-import { maskContactPhone } from '@/lib/phone';
-import { Calendar, MapPin, Phone, ArrowLeft, QrCode, MessageCircle } from 'lucide-react';
+import { Calendar, MapPin, ArrowLeft, QrCode } from 'lucide-react';
 import OwnerControls from '@/components/OwnerControls';
 import ReportActions from '@/components/ReportActions';
-import ContactPhoneCta from '@/components/ContactPhoneCta';
-import { CAT_BREEDS } from '@/data/breeds';
+import { CAT_BREEDS, DOG_BREEDS } from '@/data/breeds';
 import { FUR_COLORS } from '@/data/fur-colors';
 import ClaimAction from '@/components/ClaimAction';
 
@@ -89,15 +87,15 @@ export default async function ReportDetail({ params }: PageProps) {
   // Texto para compartir en WhatsApp (mascamos el teléfono para no exponerlo)
   const shareText = encodeURIComponent(
     `🐾 ¡POR FAVOR COMPARTE! Mascota ${isLost ? 'PERDIDA' : 'ENCONTRADA'}: ${isLost ? report.name : report.species === 'DOG' ? 'Perro' : 'Gato'
-    } en ${report.location}. Ver detalles y联系方式 en: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    } en ${report.location}. Ver detalles y contacto en: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     }/reportes/${report.id}`
   );
 
   const petColor = FUR_COLORS.find(b => b.slug === report.color)
-  const petBreed = CAT_BREEDS.find(b => b.slug === report.breed)
+  const petBreed = (report.species === 'DOG' ? DOG_BREEDS : CAT_BREEDS).find(b => b.slug === report.breed)
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8">
+    <div className="mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-8 lg:pt-8">
       {/* Botón de regreso */}
       <div className="mb-6 no-print">
         <Link
@@ -114,6 +112,12 @@ export default async function ReportDetail({ params }: PageProps) {
         <OwnerControls reportId={report.id} isReunited={report.status === 'REUNITED'} />
       )}
 
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 shadow-2xl backdrop-blur lg:hidden no-print">
+        <ClaimAction report={report} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div className="min-w-0">
       {/* 2. PÓSTER DE BÚSQUEDA (Diseño Enmarcado de Alto Impacto para Impresión/Pantalla) */}
       <div className="print-poster rounded-3xl border-3 border-foreground bg-card text-card-foreground p-5 sm:p-8 shadow-lg overflow-hidden relative">
         {/* Banner de estatus gigante */}
@@ -201,9 +205,6 @@ export default async function ReportDetail({ params }: PageProps) {
               )}
             </div>
 
-            {/* Teléfono de Contacto Gigante
-            <ContactPhoneCta phone={report.contact_phone} />
-            */}
           </div>
         </div>
 
@@ -228,13 +229,10 @@ export default async function ReportDetail({ params }: PageProps) {
       </div>
 
       {report.type === 'FOUND' ? (
-        <div className="print:hidden flex flex-col bg-[#EAF3DE] border-2 border-solid border-[#C0DD97] p-6 rounded-3xl mt-4">
-          <h3 className='text-[#3B6D11] text-xl'>🐾 ¿Es tu mascota o la reconoces?</h3>
-          <p>Si este {report.species === 'CAT' ? 'gato' : 'perro'} es tuyo o sabes de quién es, comunícate con quien lo resguarda. Tu información no será pública.</p>
-          <div className="py-2 flex">
-            <ClaimAction report={report} />
-          </div>
-          <div className="qr-hint flex items-center gap-2.5 bg-gray-100 mt-3 text-sm p-4">
+        <div className="print:hidden flex flex-col rounded-2xl border border-emerald-200 bg-emerald-50 p-5 mt-4 text-emerald-950 lg:hidden">
+          <h3 className='text-lg font-black text-emerald-800'>¿Es tu mascota o la reconoces?</h3>
+          <p className="mt-1 text-sm leading-relaxed">Comunícate con quien lo resguarda. Tu información no será pública.</p>
+          <div className="qr-hint mt-3 flex items-center gap-2.5 rounded-xl bg-white/70 p-3 text-sm">
             <div className="qr-box">
               <QrCode width={32} aria-hidden="true" />
             </div>
@@ -242,13 +240,10 @@ export default async function ReportDetail({ params }: PageProps) {
           </div>
         </div>
       ) : (
-        <div className="print:hidden flex flex-col bg-[#FCEBEB] border-2 border-solid border-[#F7C1C1] p-6 rounded-3xl mt-4">
-          <h3 className='text-[#A32D2D] text-xl'>🐾 ¿Viste o tienes a esta mascota?</h3>
-          <p>Si encontraste a este {report.species === 'CAT' ? 'gato' : 'perro'} o lo viste recientemente, avísale a su dueño. Tu información no será pública.</p>
-          <div className="py-2 flex">
-            <ClaimAction report={report} />
-          </div>
-          <div className="qr-hint flex items-center gap-2.5 bg-gray-100 mt-3 text-sm p-4">
+        <div className="print:hidden flex flex-col rounded-2xl border border-rose-200 bg-rose-50 p-5 mt-4 text-rose-950 lg:hidden">
+          <h3 className='text-lg font-black text-rose-800'>¿Viste o tienes a esta mascota?</h3>
+          <p className="mt-1 text-sm leading-relaxed">Avísale a su dueño si la viste recientemente. Tu información no será pública.</p>
+          <div className="qr-hint mt-3 flex items-center gap-2.5 rounded-xl bg-white/70 p-3 text-sm">
             <div className="qr-box">
               <QrCode width={32} aria-hidden="true" />
             </div>
@@ -256,8 +251,56 @@ export default async function ReportDetail({ params }: PageProps) {
           </div>
         </div>
       )}
+        </div>
 
-      <ReportActions shareText={shareText} />
+        <aside className="hidden space-y-4 lg:sticky lg:top-24 lg:block no-print">
+          <div className={`rounded-2xl border p-5 shadow-sm ${isLost ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'}`}>
+            <p className={`text-[11px] font-black uppercase tracking-wider ${isLost ? 'text-rose-700' : 'text-emerald-700'}`}>
+              Acción principal
+            </p>
+            <h2 className="mt-1 text-xl font-black text-foreground">
+              {isLost ? '¿Tienes información?' : '¿Es tu mascota?'}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/65">
+              {isLost
+                ? 'Envía una pista segura al dueño sin exponer tus datos públicamente.'
+                : 'Contacta a la persona que la resguarda para iniciar la verificación.'}
+            </p>
+            <div className="mt-4">
+              <ClaimAction report={report} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-[11px] font-black uppercase tracking-wider text-foreground/45">
+              Compartir y póster
+            </p>
+            <div className="mt-4">
+              <ReportActions shareText={shareText} compact />
+            </div>
+            <div className="mt-4 flex items-start gap-3 rounded-xl bg-stone-50 p-3 text-sm text-foreground/65">
+              <QrCode className="mt-0.5 h-5 w-5 shrink-0 text-lost" aria-hidden="true" />
+              <span>El póster impreso incluye un QR para abrir esta pantalla directamente.</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-[11px] font-black uppercase tracking-wider text-foreground/45">
+              Datos clave
+            </p>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div>
+                <dt className="font-black text-foreground">Zona</dt>
+                <dd className="text-foreground/65">{report.location}</dd>
+              </div>
+              <div>
+                <dt className="font-black text-foreground">Fecha</dt>
+                <dd className="text-foreground/65">{formattedDate}</dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+      </div>
 
     </div>
   );
