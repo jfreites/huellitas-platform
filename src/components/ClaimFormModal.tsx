@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useCallback } from 'react'
+import { createPortal } from 'react-dom';
 import { createContactRequest } from '@/actions/contact';
 import { Send } from 'lucide-react';
 
@@ -26,8 +27,10 @@ export default function ClaimFormModal({
         }
     }, [])
 
-    return (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50">
+    if (typeof document === 'undefined') return null
+
+    return createPortal(
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100]">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -118,6 +121,7 @@ export default function ClaimFormModal({
                     </form>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { APIProvider, InfoWindow, Map as GoogleMap, Marker } from '@vis.gl/react-google-maps';
+import { APIProvider, InfoWindow, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { MapPin, Navigation } from 'lucide-react';
 import type { Report } from '@/lib/supabase/types';
 
@@ -123,9 +123,10 @@ export default function ReportMap({ reports, apiKey }: ReportMapProps) {
             streetViewControl={false}
             fullscreenControl={false}
             className="h-full w-full"
+            mapId="PET_REPORTS"
           >
             {mappedReports.map((report) => (
-              <Marker
+              <AdvancedMarker
                 key={report.id}
                 position={{ lat: report.latitude, lng: report.longitude }}
                 title={getReportTitle(report)}
