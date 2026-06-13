@@ -21,6 +21,41 @@ This document walks you through everything you need to do in the Supabase dashbo
 
 ---
 
+## 1.1. Contact request tracking
+
+Run this SQL after the base schema to store contact/reclaim requests from public report pages. The app inserts with the server-side `service_role` key; RLS stays enabled with no client policies so browser clients cannot read or write this table directly.
+
+```sql
+create extension if not exists pgcrypto;
+
+create table if not exists public.contact_requests (
+  id uuid primary key default gen_random_uuid(),
+  report_id uuid not null references public.reports(id) on delete cascade,
+  report_owner_id uuid not null references public.profiles(id) on delete cascade,
+  requester_name text not null,
+  requester_contact text not null,
+  requester_message text,
+  requester_email text,
+  requester_phone text,
+  ip_hash text not null,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists contact_requests_report_id_idx
+  on public.contact_requests (report_id);
+
+create index if not exists contact_requests_report_owner_id_idx
+  on public.contact_requests (report_owner_id);
+
+create index if not exists contact_requests_rate_limit_idx
+  on public.contact_requests (report_id, ip_hash, created_at desc);
+
+alter table public.contact_requests enable row level security;
+```
+
+---
+
 ## 2. Get the API keys
 
 1. Go to `https://supabase.com/dashboard/project/vqbkmdvhvqwasvdwjdtf/settings/api`
@@ -99,6 +134,12 @@ NEXT_PUBLIC_SUPABASE_URL="https://vqbkmdvhvqwasvdwjdtf.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ…"
 SUPABASE_SERVICE_ROLE_KEY="eyJ…"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="..."
+CONTACT_REQUEST_IP_SALT="change-me-in-production"
+
+# Optional: enables real transactional emails. Without it, emails are logged.
+RESEND_API_KEY="re_..."
+SENDER_EMAIL="Huellitas <noreply@your-domain.com>"
 ```
 
 Then run:
@@ -120,6 +161,8 @@ pnpm dev
 - [ ] Sign in, visit `/reportes/nuevo` (was protected by middleware — confirms auth)
 - [ ] Create a report with an image → confirm the file lands in **Storage → pet-images** under your `<user_id>/` folder
 - [ ] View the report on `/reportes` and `/reportes/<id>`
+- [ ] Submit the contact form on a report → confirm a row lands in `contact_requests`
+- [ ] Confirm owner/internal contact emails are delivered or logged when `RESEND_API_KEY` is absent
 - [ ] Mark it as REUNITED (owner-only — RLS will block other users)
 - [ ] Sign out, visit `/reportes/nuevo` → redirects to `/login?callback=…`
 

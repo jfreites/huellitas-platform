@@ -11,14 +11,35 @@
 // the OTP code generation, expiration and delivery for us.
 // -----------------------------------------------------------------------------
 
-export async function sendEmailOtp(email: string, code: string): Promise<{ success: boolean; error?: string }> {
-  console.log(`\n========================================\n[EMAIL OTP SIMULATION]`);
-  console.log(`Para: ${email}`);
-  console.log(`Código de Verificación: ${code}`);
-  console.log(`Válido por: 5 minutos`);
-  console.log(`========================================\n`);
+type EmailResult = { success: boolean; error?: string };
+
+export interface TransactionalEmailInput {
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Unknown email error';
+}
+
+export async function sendTransactionalEmail({
+  to,
+  subject,
+  html,
+  text,
+}: TransactionalEmailInput): Promise<EmailResult> {
+  const recipients = Array.isArray(to) ? to : [to];
 
   if (!process.env.RESEND_API_KEY) {
+    console.log('\n========================================');
+    console.log('[TRANSACTIONAL EMAIL MOCK]');
+    console.log(`To: ${recipients.join(', ')}`);
+    console.log(`Subject: ${subject}`);
+    if (text) console.log(`Text: ${text}`);
+    console.log(`HTML: ${html}`);
+    console.log('========================================\n');
     return { success: true };
   }
 
@@ -30,10 +51,40 @@ export async function sendEmailOtp(email: string, code: string): Promise<{ succe
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: process.env.SENDER_EMAIL || 'noreply@huellitas.org',
-        to: email,
-        subject: `${code} es tu código de verificación de Huellitas`,
-        html: `
+        from: process.env.SENDER_EMAIL || 'Huellitas <noreply@huellitas.org>',
+        to: recipients,
+        subject,
+        html,
+        text,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return { success: false, error: `Resend API failed: ${errText}` };
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function sendEmailOtp(email: string, code: string): Promise<EmailResult> {
+  console.log(`\n========================================\n[EMAIL OTP SIMULATION]`);
+  console.log(`Para: ${email}`);
+  console.log(`Código de Verificación: ${code}`);
+  console.log(`Válido por: 5 minutos`);
+  console.log(`========================================\n`);
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true };
+  }
+
+  return sendTransactionalEmail({
+    to: email,
+    subject: `${code} es tu código de verificación de Huellitas`,
+    html: `
           <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
             <div style="text-align: center; margin-bottom: 20px;">
               <span style="font-size: 24px; font-weight: bold; color: #ff4f4f;">🐾 Huellitas</span>
@@ -46,16 +97,5 @@ export async function sendEmailOtp(email: string, code: string): Promise<{ succe
             <p style="font-size: 12px; color: #94a3b8; text-align: center;">Este código expirará en 5 minutos. Si no solicitaste este código, puedes ignorar este correo.</p>
           </div>
         `,
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      return { success: false, error: `Resend API failed: ${errText}` };
-    }
-
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  });
 }

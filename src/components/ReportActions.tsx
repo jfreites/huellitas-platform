@@ -4,9 +4,10 @@ import { Printer, Share2, ArrowUpRight } from 'lucide-react';
 
 interface ReportActionsProps {
   shareText: string;
+  compact?: boolean;
 }
 
-export default function ReportActions({ shareText }: ReportActionsProps) {
+export default function ReportActions({ shareText, compact = false }: ReportActionsProps) {
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
       window.print();
@@ -20,7 +21,7 @@ export default function ReportActions({ shareText }: ReportActionsProps) {
   };
 
   return (
-    <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 no-print">
+    <div className={`${compact ? 'grid grid-cols-1' : 'mt-6 grid grid-cols-1 sm:grid-cols-3'} gap-3 no-print`}>
       {/* Compartir WhatsApp */}
       <a
         href={`https://api.whatsapp.com/send?text=${shareText}`}
