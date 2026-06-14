@@ -162,10 +162,25 @@ body {
     border: 3px solid #000000 !important;
   }
   
-  .print-poster img {
+  .print-poster img:not(.qr-print-image) {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
+    display: block !important;
+  }
+
+  .print-poster .qr-print-box {
+    width: auto !important;
+    height: auto !important;
+    padding: 0.08cm !important;
+  }
+
+  .print-poster .qr-print-box .qr-print-image {
+    width: 0.9cm !important;
+    height: 0.9cm !important;
+    max-width: 0.9cm !important;
+    max-height: 0.9cm !important;
+    object-fit: contain !important;
     display: block !important;
   }
   

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/service';
 import { getSession } from '@/lib/supabase/session';
 import { getPublicUrl } from '@/lib/supabase/storage';
+import { generateReportQrDataUrl } from '@/lib/qr';
 import { reportFormSchema } from '@/lib/schemas';
 import type {
   PetSpecies,
@@ -131,6 +132,21 @@ export async function createReport(formData: {
       // Roll back the orphan report so the user can retry cleanly.
       await supabase.from('reports').delete().eq('id', reportRow.id);
       throw new Error(imageError.message);
+    }
+
+    try {
+      const qrCodeDataUrl = await generateReportQrDataUrl(reportRow.id);
+      const admin = getSupabaseAdmin();
+      const { error: qrError } = await admin
+        .from('reports')
+        .update({ qr_code_data_url: qrCodeDataUrl } as never)
+        .eq('id', reportRow.id);
+
+      if (qrError) {
+        console.error('Error al guardar QR del reporte:', qrError.message);
+      }
+    } catch (qrError) {
+      console.error('Error al generar QR del reporte:', qrError);
     }
 
     revalidatePath('/');
