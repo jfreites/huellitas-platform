@@ -83,13 +83,13 @@ export default async function ReportDetail({ params }: PageProps) {
   };
 
   const statusDisplay = getStatusDisplay();
+  const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reportes/${report.id}`;
+  const shareMessage = `🐾 ¡POR FAVOR COMPARTE! Mascota ${isLost ? 'PERDIDA' : 'ENCONTRADA'}: ${
+    isLost ? report.name : report.species === 'DOG' ? 'Perro' : 'Gato'
+  } en ${report.location}. Ver detalles y contacto en: ${reportUrl}`;
 
   // Texto para compartir en WhatsApp (mascamos el teléfono para no exponerlo)
-  const shareText = encodeURIComponent(
-    `🐾 ¡POR FAVOR COMPARTE! Mascota ${isLost ? 'PERDIDA' : 'ENCONTRADA'}: ${isLost ? report.name : report.species === 'DOG' ? 'Perro' : 'Gato'
-    } en ${report.location}. Ver detalles y contacto en: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    }/reportes/${report.id}`
-  );
+  const shareText = encodeURIComponent(shareMessage);
 
   const petColor = FUR_COLORS.find(b => b.slug === report.color)
   const petBreed = (report.species === 'DOG' ? DOG_BREEDS : CAT_BREEDS).find(b => b.slug === report.breed)
@@ -251,6 +251,14 @@ export default async function ReportDetail({ params }: PageProps) {
           </div>
         </div>
       )}
+
+      <div className="mt-4 lg:hidden">
+        <ReportActions
+          shareText={shareText}
+          shareUrl={reportUrl}
+          shareMessage={shareMessage}
+        />
+      </div>
         </div>
 
         <aside className="hidden space-y-4 lg:sticky lg:top-24 lg:block no-print">
@@ -276,7 +284,12 @@ export default async function ReportDetail({ params }: PageProps) {
               Compartir y póster
             </p>
             <div className="mt-4">
-              <ReportActions shareText={shareText} compact />
+              <ReportActions
+                shareText={shareText}
+                shareUrl={reportUrl}
+                shareMessage={shareMessage}
+                compact
+              />
             </div>
             <div className="mt-4 flex items-start gap-3 rounded-xl bg-stone-50 p-3 text-sm text-foreground/65">
               <QrCode className="mt-0.5 h-5 w-5 shrink-0 text-lost" aria-hidden="true" />
