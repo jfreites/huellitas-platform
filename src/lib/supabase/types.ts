@@ -58,6 +58,7 @@ export interface Report {
   date: string;
   description: string | null;
   contact_phone: string;
+  qr_code_data_url: string | null;
   created_at: string;
   updated_at: string;
   images?: ReportImage[];

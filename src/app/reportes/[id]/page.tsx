@@ -221,13 +221,22 @@ export default async function ReportDetail({ params }: PageProps) {
 
         {/* Firma / QR Mock para impresión */}
         <div className="hidden print:flex items-center justify-between border-t-2 border-foreground pt-5 mt-8 text-xs">
-          <div className="max-w-xs">
-            <p className="font-bold">Escanea para ver actualizaciones o enviar ubicación:</p>
+          <div className="max-w-md">
+            <p className="font-bold">Escanea para ver actualizaciones o contactar al autor del reporte:</p>
             <p className="text-foreground/60 mt-0.5">huellitas.org/reportes/{report.id}</p>
           </div>
-          <div className="border-2 border-foreground p-1 text-[8px] font-bold tracking-widest">
-            QR CODE MOCK
-          </div>
+          {report.qr_code_data_url && (
+            <div className="qr-print-box border-2 border-foreground bg-white p-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={report.qr_code_data_url}
+                alt="Código QR del reporte"
+                width={36}
+                height={36}
+                className="qr-print-image h-9 w-9 object-contain"
+              />
+            </div>
+          )}
         </div>
       </div>
 

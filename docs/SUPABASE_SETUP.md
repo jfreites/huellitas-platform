@@ -54,6 +54,17 @@ create index if not exists contact_requests_rate_limit_idx
 alter table public.contact_requests enable row level security;
 ```
 
+## 1.2. Printable report QR codes
+
+Run this SQL after the base schema so newly created reports can store the generated QR code used by the printable poster. Existing reports are not backfilled; they simply won't render a QR in print mode.
+
+```sql
+alter table public.reports
+  add column if not exists qr_code_data_url text;
+```
+
+In production, set `NEXT_PUBLIC_APP_URL` to the public site URL before creating reports. The QR encodes `${NEXT_PUBLIC_APP_URL}/reportes/<id>`.
+
 ---
 
 ## 2. Get the API keys
