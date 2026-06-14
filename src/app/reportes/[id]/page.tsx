@@ -9,6 +9,7 @@ import ReportActions from '@/components/ReportActions';
 import { CAT_BREEDS, DOG_BREEDS } from '@/data/breeds';
 import { FUR_COLORS } from '@/data/fur-colors';
 import ClaimAction from '@/components/ClaimAction';
+import ReunitedImageStamp from '@/components/ReunitedImageStamp';
 
 export const dynamic = 'force-dynamic';
 
@@ -135,6 +136,8 @@ export default async function ReportDetail({ params }: PageProps) {
           <div className="relative aspect-4/3 md:aspect-square w-full rounded-2xl border-2 border-foreground overflow-hidden bg-stone-100 dark:bg-stone-900">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={mainImage} alt={report.name || 'Mascota'} className="h-full w-full object-cover" />
+
+            {report.status === 'REUNITED' && <ReunitedImageStamp />}
 
             {/* Especie Badge */}
             <div className="absolute bottom-4 right-4 rounded-full border-2 border-foreground bg-background px-3 py-1.5 text-xs font-black shadow-md">

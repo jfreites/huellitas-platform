@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Calendar, MapPin, ShieldCheck, Sparkles, Tag } from 'lucide-react';
 import { CAT_BREEDS, DOG_BREEDS } from '@/data/breeds';
 import { FUR_COLORS } from '@/data/fur-colors';
+import ReunitedImageStamp from '@/components/ReunitedImageStamp';
 import { REPORT_STATUS_BADGE, REPORT_STATUS_LABEL } from '@/lib/supabase/types';
 import type { Report } from '@/lib/supabase/types';
 
@@ -66,6 +67,8 @@ export default function ReportCard({ report }: ReportCardProps) {
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
+
+        {report.status === 'REUNITED' && <ReunitedImageStamp />}
 
         <div className="absolute top-3 left-3 flex gap-1.5">
           <span
